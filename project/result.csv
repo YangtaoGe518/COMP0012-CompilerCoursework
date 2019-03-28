@@ -1,0 +1,3 @@
+
+tests/open/n-c-style-if.s
+Syntax error at line 1, column 5. Couldn't repair and continue parse at character 0 of input
