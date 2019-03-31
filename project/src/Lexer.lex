@@ -17,24 +17,39 @@ import java_cup.runtime.*;
   private Symbol symbol(int type, Object value) {
     return new Symbol(type, yyline, yycolumn, value);
   }
+
+  private void reportError(int line, String msg){
+    throw new RuntimeException("Lexical error at line #" + line + ": " + msg);
+  }
+
+  public String currentLexeme(){
+    int l = yyline + 1;
+    int c = yycolumn + 1;
+    return "line: " + 1 + ", column: " + c + ", with: " + yytext();
+  }
 %}
 
 /* Regex for Marco Definition */
 
-// WhiteSpace
+/* WhiteSpace */
 LineTerminator = \r|\n|\r\n
 InputCharacter = [ˆ\r\n]
 WhiteSpace = {LineTerminator} | [ \t\f]
 
-// comments 
-Comment = {TraditionalComment} | {EndOfLineComment} | {DocumentationComment}
+/* comments */ 
+Comment = {TraditionalComment} | {EndOfLineComment}
 
-TraditionalComment = "/*" [ˆ*] {CommentContent} "*"+ "/"
-EndOfLineComment = "//" {InputCharacter}* {LineTerminator}
-DocumentationComment = "/**" {CommentContent} "*"+ "/"
+TraditionalComment = "/#" [ˆ#] {CommentContent} "#"+ "/"
+EndOfLineComment = "#" {InputCharacter}* {LineTerminator}
+CommentContent = "/#" [^#] ~"#/" | "/#" "#" + "/"
 
-CommentContent = ( [ˆ*] | \*+ [ˆ/*] )*
-
+/* Basic */
+letter = [A-Za-z]
+L = [a-zA-Z_]
+digit = [0-9]
+alphanumeric = {letter}|{digit}
+other_id_char = [_]
+identifier = {letter}({alphanumeric}|{other_id_char})*
 
 %%
 <YYINITIAL> {
@@ -59,9 +74,7 @@ CommentContent = ( [ˆ*] | \*+ [ˆ/*] )*
 
 /* Error Feedback */
 [^]  {
-  System.out.println("file:" + (yyline+1) +
-    ":0: Error: Invalid input '" + yytext()+"'");
-  return symbol(sym.BADCHAR);
+  reportError(yyline+1, "Illegal character \"" + yytext + "\"");
 }
 
 
