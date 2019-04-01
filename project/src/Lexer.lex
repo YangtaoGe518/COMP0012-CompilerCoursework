@@ -2,14 +2,13 @@ import java_cup.runtime.*;
 
 %%
 %class Lexer
+%public
 %unicode
 %cup
 %line
 %column
 
 %{
-  StringBuffer string = new StringBuffer();
-
   private Symbol symbol(int type) {
     return new Symbol(type, yyline, yycolumn);
   }
@@ -25,7 +24,7 @@ import java_cup.runtime.*;
   public String currentLexeme(){
     int l = yyline + 1;
     int c = yycolumn + 1;
-    return "line: " + 1 + ", column: " + c + ", with: " + yytext();
+    return "line: " + l + ", column: " + c + ", with: " + yytext();
   }
 %}
 
@@ -33,14 +32,14 @@ import java_cup.runtime.*;
 
 /* WhiteSpace */
 LineTerminator = \r|\n|\r\n
-InputCharacter = [ˆ\r\n]
+InputCharacter = [^\r\n]
 WhiteSpace = {LineTerminator} | [ \t\f]
 
 /* comments */ 
 Comment = {TraditionalComment} | {EndOfLineComment}
 
-TraditionalComment = "/#" [ˆ#] {CommentContent} "#"+ "/"
-EndOfLineComment = "#" {InputCharacter}* {LineTerminator}
+TraditionalComment = "/#" [^#] {CommentContent} "#"+ "/"
+EndOfLineComment = "#" {InputCharacter}* {LineTerminator}?
 CommentContent = "/#" [^#] ~"#/" | "/#" "#" + "/"
 
 /* Basic */
@@ -49,10 +48,15 @@ L = [a-zA-Z_]
 digit = [0-9]
 alphanumeric = {letter}|{digit}
 other_id_char = [_]
+
 identifier = {letter}({alphanumeric}|{other_id_char})*
-string = \"([^\\\"]|\\.)*\"
+
+string = \" ([^\\\"]|\\.)* \"
+
+integer = 0 | [1-9][0-9]*
 
 %%
+
 <YYINITIAL> {
 
   /* key words */
@@ -64,6 +68,7 @@ string = \"([^\\\"]|\\.)*\"
   "seq"                         {return symbol(sym.SEQ);}
   "len"                         {return symbol(sym.LEN);}
   "in"                          {return symbol(sym.IN);}
+  "bool"                        {return symbol(sym.BOOL);}
   
   "tdef"                        {return symbol(sym.TDEF);}
   "alias"                       {return symbol(sym.ALIAS);}
@@ -86,7 +91,7 @@ string = \"([^\\\"]|\\.)*\"
   /* Boolean */
   "!"                           {return symbol(sym.LOGNEGATION);}
   "&&"                          {return symbol(sym.DOUBLEAND);}
-  "||"                          {return symbol(sym.OROP, new String(yytext()));}
+  "||"                          {return symbol(sym.OR, new String(yytext()));}
 
   /* numeric */
   "+"                           {return symbol(sym.PLUS);}
@@ -97,7 +102,7 @@ string = \"([^\\\"]|\\.)*\"
   /* Separators */
   ";"                           {return symbol(sym.SIMICOLON, new String(yytext()));}
   ":"                           {return symbol(sym.COLON);}
-  "::"                          {return symbol(sym.SEPPTR);}
+  "::"                          {return symbol(sym.DOUBLECOL);}
   "."                           {return symbol(sym.DOT, new String(yytext()));}
 
   "["                           {return symbol(sym.LSQRBRK);}
@@ -119,6 +124,7 @@ string = \"([^\\\"]|\\.)*\"
 
   /* Others */
   {string}                      {return symbol(sym.STRING_LITERAL, new String(yytext()));}
+  {integer}                     {return symbol(sym.INTEGER_LITERAL, new String(yytext()));}
 
   {identifier}                  {return symbol(sym.IDENTIFIER, new String(yytext()));}
 
@@ -127,10 +133,9 @@ string = \"([^\\\"]|\\.)*\"
  
 }
 
-
 /* Error Feedback */
 [^]  {
-  reportError(yyline+1, "Illegal character \"" + yytext + "\"");
+  reportError(yyline+1, "Illegal character \" " + yytext() + " \"");
 }
 
 
